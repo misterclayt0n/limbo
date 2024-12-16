@@ -32,7 +32,10 @@ use storage::pager::allocate_page;
 use storage::sqlite3_ondisk::{DatabaseHeader, DATABASE_HEADER_SIZE};
 pub use storage::wal::WalFile;
 pub use storage::wal::WalFileShared;
+pub use types::OwnedValue;
 use util::parse_schema_rows;
+
+use std::collections::HashMap;
 
 use translate::optimizer::optimize_plan;
 use translate::planner::prepare_select_plan;
@@ -355,6 +358,7 @@ pub struct Statement {
     program: Rc<vdbe::Program>,
     state: vdbe::ProgramState,
     pager: Rc<Pager>,
+    bind_values: HashMap<usize, OwnedValue>,
 }
 
 impl Statement {
@@ -364,6 +368,7 @@ impl Statement {
             program,
             state,
             pager,
+            bind_values: HashMap::new(),
         }
     }
 
@@ -382,6 +387,11 @@ impl Statement {
     }
 
     pub fn reset(&self) {}
+
+    pub fn bind_parameter(&mut self, index: usize, value: OwnedValue) -> crate::Result<()> {
+        self.bind_values.insert(index, value);
+        Ok(())
+    }
 }
 
 pub enum RowResult<'a> {

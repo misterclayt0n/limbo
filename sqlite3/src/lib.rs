@@ -463,11 +463,22 @@ pub unsafe extern "C" fn sqlite3_bind_null(
 
 #[no_mangle]
 pub unsafe extern "C" fn sqlite3_bind_int64(
-    _stmt: *mut sqlite3_stmt,
-    _idx: ffi::c_int,
-    _val: i64,
+    stmt: *mut sqlite3_stmt,
+    idx: ffi::c_int,
+    val: i64,
 ) -> ffi::c_int {
-    stub!();
+    if stmt.is_null() {
+        return SQLITE_MISUSE;
+    }
+
+    let stmt = &mut *stmt;
+    let param_index = (idx - 1) as usize;
+    let owned_value = limbo_core::OwnedValue::Integer(val);
+
+    match stmt.stmt.bind_parameter(param_index, owned_value) {
+        Ok(_) => SQLITE_OK,
+        Err(_) => SQLITE_ERROR,
+    }
 }
 
 #[no_mangle]
